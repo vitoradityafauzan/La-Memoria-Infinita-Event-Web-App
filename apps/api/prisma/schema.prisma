@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Attendees
+  Organizer
+}
+
+model User {
+  idUser       Int     @id @default(autoincrement())
+  firstName    String
+  lastName     String
+  email        String  @unique
+  password     String
+  phone        String
+  userType     Role
+  referralCode String?
+  points       Int     @default(0)
+  isActive     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  Event    Event[]
+  Discount Discount[]
+  Ticket   Ticket[]
+  Review   Review[]
+}
+
+enum CategoryList {
+  // Special Event
+  Special
+  // Social Meeting & Convention
+  Social
+  // Trade Show
+  Trade
+  // Corporate & Gallas
+  Corporate
+}
+
+model Category {
+  idCategory Int          @id @default(autoincrement())
+  name       CategoryList @default(Trade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  Event Event[]
+}
+
+enum LocationList {
+  A1
+  A2
+  B1
+  B2
+  M1
+  M2
+  M3
+  M4
+}
+
+model Location {
+  idLocation Int          @id @default(autoincrement())
+  name       LocationList @default(A1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  Event Event[]
+}
+
+model Event {
+  idEvent     Int      @id @default(autoincrement())
+  organizerId Int
+  name        String
+  slug        String
+  desc        String   @db.LongText
+  image       String?
+  price       Int
+  amount      Int
+  categoryId  Int
+  startDate   DateTime
+  endDate     DateTime
+  locationId  Int
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user     User     @relation(fields: [organizerId], references: [idUser])
+  category Category @relation(fields: [categoryId], references: [idCategory])
+  location Location @relation(fields: [locationId], references: [idLocation])
+
+  Discount Discount[]
+  Ticket   Ticket[]
+}
+
+// Untuk tipe referral, amount bisa dikurangi. di profile, count amount yg tidak expired.
+model Discount {
+  idDiscount   Int     @id @default(autoincrement())
+  uniqueCode   String  @unique
+  discountName String
+  organizerId  Int
+  percentage   Int
+  eventId      Int     @default(0) // Universal or specific event for voucher
+  isExpired    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user  User  @relation(fields: [organizerId], references: [idUser])
+  event Event @relation(fields: [eventId], references: [idEvent])
+
+  Ticket Ticket[]
+}
+
+enum UseType {
+  registration
+  event
+}
+
+model ReferralUse {
+  idReferralUse  Int     @id @default(autoincrement())
+  userId         Int
+  useType        UseType
+  eventId        Int?
+  referrelUsed   Int?
+  referrelUserId Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+enum TicketStatus {
+  Active
+  Used
+  Expired
+}
+
+model Ticket {
+  id           Int          @id @default(autoincrement())
+  eventId      Int
+  userId       Int
+  purchaseDate DateTime     @default(now())
+  price        Float
+  pointsUsed   Int?
+  discountId   Int?
+  status       TicketStatus @default(Active)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  Review Review[]
+
+  user     User      @relation(fields: [userId], references: [idUser])
+  event    Event     @relation(fields: [eventId], references: [idEvent])
+  discount Discount? @relation(fields: [discountId], references: [idDiscount])
+}
+
+model History {
+  idHistory Int @id @default(autoincrement())
+  eventId   Int
+  userId    Int
+  tiketId   Int
+  payAmount Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Review {
+  idReview Int @id @default(autoincrement())
+  userId   Int
+  ticketId Int
+  review   Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user   User   @relation(fields: [userId], references: [idUser])
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+}
